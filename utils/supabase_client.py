@@ -1,12 +1,13 @@
 import os
+from dotenv import load_dotenv
 from supabase import create_client, Client
 from enum import Enum
-from utils.gemini_client import embedding_with_gemini
-from utils.openai_client import embedding_with_openai
 
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+load_dotenv()
+
+SUPABASE_URL: str = os.getenv("SUPABASE_URL")
+SUPABASE_KEY: str = os.getenv("SUPABASE_ANON_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 class Role(Enum):
@@ -19,27 +20,44 @@ def insert_chat(chat_id: int, role: Role, message: str):
     "chat_id": chat_id,
     "role": role,
     "message": message
-  }).execute
-
-
-def insert_knowledge(text):
-  embedded = embedding_with_openai(text)
-
-  data, count = supabase.table("knowledge_base").insert({
-    "content": text,
-    "embedding": embedded.data[0].embedding
   }).execute()
 
-  return data
+
+def insert_knowledge(chunked, embedded):
+  insert_data = []
+
+  for chunk, embedding in zip(chunked, embedded):
+    insert_data.append({
+      "content": chunk,
+      "embedding": embedding
+    })
+
+  try:
+    response = supabase.table("knowledge_base").insert(insert_data).execute()
+    if hasattr(response, "error") and response.error is not None:
+      return {"success": False, "error": str(response.error)}
+
+    return {
+      "success": True,
+      "message": 'Knowledge successfully inserted.'
+    }
+  except Exception as err:
+    return {
+      "success": False,
+      "error": str(err)
+    }
 
 
-def search_knowledge(text: str, match_count: int = 3):
-  embedded = embedding_with_openai(text)
-  # embedded = embedding_with_gemini(text)
-  
-  response = supabase.rpc("match_documents", {
-      "query_embedding": embedded,
-      "match_count": match_count
+def search_knowledge(embedded, match_count: int = 3):
+  try:
+    response = supabase.rpc("match_documents", {
+    "query_embedding": embedded,
+    "match_count": match_count
   }).execute()
 
-  return response.data
+    return response.data
+  except Exception as err:
+    return {
+      "success": False,
+      "error": f"Error occurred while searching: {str(err)}",
+    }

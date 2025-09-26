@@ -3,13 +3,14 @@ import requests
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv
 from enum import Enum
-from utils.gemini_client import ask_gemini
-# from utils.openai_client import ask_openai
-from utils.supabase_client import insert_chat, search_knowledge
-from utils.telegram_client import send_message
+from utils.openai_client import ask_openai
+from utils.deepseek_client import ask_deepseek
+from utils.processes import process_text
+from utils.telegram_client import sent_message
 
 
 load_dotenv()
+
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 app = FastAPI()
@@ -32,24 +33,36 @@ def set_webhook():
 async def telegram_webhook(request: Request):
   data = await request.json()
 
-  print(data)
-
   if "message" in data:
     chat_id = data["message"]["chat"]["id"]
     text = data["message"].get("text", "")
 
-    matches = search_knowledge(text)
-    context = "\n".join([m["content"] for m in matches])
+    #* ADMIN
+    #* insert knowledge
+    # data = process_text(text)
 
-    # answer = ask_openai(context, text)
-    answer = ask_gemini(context, text)
+    #* sent message to client
+    # sent_message(chat_id, f"Berhasil menambahkan knowledge")
 
-    #* INSERT CHAT HISTORY FOR LOGGING
-    insert_chat(chat_id, Role.USER, text)
-    insert_chat(chat_id, Role.BOT, answer)
+    #* USER
+    #* retrieve knowledge
+    matches = process_text(text, 'retrieve')
+    context = "\n".join([match["content"] for match in matches])
 
-    #* SEND MESSAGE TO CLIENT
-    # send_message(chat_id, answer)
-    send_message(text)
+    #* ai answer
+    answer = ask_openai(context, text)
+    if isinstance(answer, dict) and not answer.get("success", True):
+      answer = ask_deepseek(context, text)
+      
+      print(f"Fallback ke Deepseek. Ini adalah context + answer dari Deepseek: {answer}")
+    else:
+      print(f"Ini adalah context + answer dari OpenAI: {answer}")
+
+    #* insert chat history for logging
+    # insert_chat(chat_id, Role.USER, text)
+    # insert_chat(chat_id, Role.BOT, answer)
+
+    #* sent message to client
+    # sent_message(chat_id, answer)
 
   return {"ok": True}
