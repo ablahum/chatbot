@@ -3,6 +3,7 @@ import requests
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv
 from enum import Enum
+from utils.huggingface import ask_huggingface
 from utils.openai_client import ask_openai
 from utils.deepseek_client import ask_deepseek
 from utils.processes import process_text
@@ -50,13 +51,16 @@ async def telegram_webhook(request: Request):
     context = "\n".join([match["content"] for match in matches])
 
     #* ai answer
-    answer = ask_openai(context, text)
-    if isinstance(answer, dict) and not answer.get("success", True):
-      answer = ask_deepseek(context, text)
+    result = ask_huggingface(context, text)
+    print(f"ini hasil dari huggingface: {result}")
+    
+    # answer = ask_openai(context, text)
+    # if isinstance(answer, dict) and not answer.get("success", True):
+    #   answer = ask_deepseek(context, text)
       
-      print(f"Fallback ke Deepseek. Ini adalah context + answer dari Deepseek: {answer}")
-    else:
-      print(f"Ini adalah context + answer dari OpenAI: {answer}")
+    #   print(f"Fallback ke Deepseek. Ini adalah context + answer dari Deepseek: {answer}")
+    # else:
+    #   print(f"Ini adalah context + answer dari OpenAI: {answer}")
 
     #* insert chat history for logging
     # insert_chat(chat_id, Role.USER, text)

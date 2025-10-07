@@ -25,7 +25,7 @@ def ask_deepseek(context: str, text: str):
       messages=[
         {
           "role": "system",
-          "content": "You are a highly intelligent and professional AI assistant. Your job is to answer user questions accurately, clearly, and relevantly based solely on the information contained in the database. If an answer isn't found within the context of the database, be honest about the lack of information. Don't add or fabricate answers outside the context of the database. Answer in formal, easy-to-understand Bahasa Indonesia.",
+          "content": "You are a highly intelligent and professional AI assistant. Your job is to answer user messages accurately, clearly, and relevantly based solely on the information contained in the database. If an answer isn't found within the context of the database, be honest about the lack of information. Don't add or fabricate answers outside the context of the database. Answer in formal, easy-to-understand Bahasa Indonesia.",
         },
         {
           "role": "user",
