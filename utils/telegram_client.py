@@ -4,7 +4,6 @@ import requests
 
 
 load_dotenv()
-
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 
@@ -15,4 +14,4 @@ def sent_message(chat_id: int, text: str):
     "text": text
   }
 
-  requests.post(url, json=payload)
+  requests.post(url, json = payload)

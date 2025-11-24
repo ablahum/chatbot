@@ -5,7 +5,6 @@ from enum import Enum
 
 
 load_dotenv()
-
 SUPABASE_URL: str = os.getenv("SUPABASE_URL")
 SUPABASE_KEY: str = os.getenv("SUPABASE_ANON_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -16,11 +15,28 @@ class Role(Enum):
 
 
 def insert_chat(chat_id: int, role: Role, message: str):
-  supabase.table('chat_history').insert({
-    "chat_id": chat_id,
-    "role": role,
-    "message": message
-  }).execute()
+  try:
+    response = supabase.table('chat_history').insert({
+      "chat_id": chat_id,
+      "role": role.value,
+      "message": message
+    }).execute()
+    
+    if hasattr(response, "error") and response.error is not None:
+      return {
+        "success": False,
+        "error": str(response.error)
+      }
+
+    return {
+      "success": True,
+      "message": "Chat successfully inserted."
+    }
+  except Exception as err:
+    return {
+      "success": False,
+      "error": str(err)
+    }
 
 
 def insert_knowledge(chunked, embedded):

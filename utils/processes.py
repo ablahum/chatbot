@@ -21,7 +21,7 @@ def chunk_text(text: str):
 
 
 #* EMBED CHUNKED TEXT
-def embed_chunked(type: str, source):
+def embed_chunked(source, type: str):
   model = SentenceTransformer('all-mpnet-base-v2')
 
   if type == 'retrieve':
@@ -65,15 +65,16 @@ def embed_chunked(type: str, source):
       }
 
 
-def process_text(text: str, type: str = 'insert'):
+#* PROCESS THE GIVEN TEXT/MESSAGE
+def process_text(text: str, type: str):
   try:
     if type == 'retrieve':
-      embedded = embed_chunked(type, text)
+      embedded = embed_chunked(text, type)
 
       return search_knowledge(embedded)
     elif type == 'insert':
       chunked = chunk_text(text)
-      embedded = embed_chunked(type, chunked)
+      embedded = embed_chunked(chunked, type)
 
       return insert_knowledge(chunked, embedded)
     else:

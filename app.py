@@ -3,18 +3,18 @@ import requests
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv
 from enum import Enum
+from utils.gemini_client import ask_gemini
 from utils.huggingface import ask_huggingface
-from utils.openai_client import ask_openai
-from utils.deepseek_client import ask_deepseek
 from utils.processes import process_text
+from utils.supabase_client import insert_chat
 from utils.telegram_client import sent_message
 
 
 load_dotenv()
-
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 app = FastAPI()
+
 class Role(Enum):
   USER = "user"
   BOT = "bot"
@@ -40,7 +40,7 @@ async def telegram_webhook(request: Request):
 
     #* ADMIN
     #* insert knowledge
-    # data = process_text(text)
+    # data = process_text(text, 'insert')
 
     #* sent message to client
     # sent_message(chat_id, f"Berhasil menambahkan knowledge")
@@ -51,22 +51,13 @@ async def telegram_webhook(request: Request):
     context = "\n".join([match["content"] for match in matches])
 
     #* ai answer
-    result = ask_huggingface(context, text)
-    print(f"ini hasil dari huggingface: {result}")
-    
-    # answer = ask_openai(context, text)
-    # if isinstance(answer, dict) and not answer.get("success", True):
-    #   answer = ask_deepseek(context, text)
-      
-    #   print(f"Fallback ke Deepseek. Ini adalah context + answer dari Deepseek: {answer}")
-    # else:
-    #   print(f"Ini adalah context + answer dari OpenAI: {answer}")
+    answer = ask_gemini(context, text)
 
     #* insert chat history for logging
-    # insert_chat(chat_id, Role.USER, text)
-    # insert_chat(chat_id, Role.BOT, answer)
+    insert_chat(chat_id, Role.USER, text)
+    insert_chat(chat_id, Role.BOT, answer)
 
     #* sent message to client
-    # sent_message(chat_id, answer)
+    sent_message(chat_id, answer)
 
   return {"ok": True}
