@@ -3,11 +3,9 @@ from google.genai import types
 import os
 from dotenv import load_dotenv
 
-
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key = GEMINI_API_KEY)
-
 
 # def embed_with_gemini(text: str):
 #   try:
@@ -24,7 +22,6 @@ client = genai.Client(api_key = GEMINI_API_KEY)
 #       "error": f"Error occurred while embedding with Gemini: {str(err)}",
 #       "result": []
 #     }
-
 
 #* GET GEMINI'S RESPONSE/ANSWER
 def ask_gemini(context: str, text: str):

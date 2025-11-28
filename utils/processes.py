@@ -3,7 +3,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 from utils.supabase_client import insert_knowledge, search_knowledge
 
-
 #* CHUNK RAW TEXT
 def chunk_text(text: str):
   try:
@@ -18,7 +17,6 @@ def chunk_text(text: str):
       "error": f"Error occurred while chunking: {str(err)}",
       "result": []
     }
-
 
 #* EMBED CHUNKED TEXT
 def embed_chunked(source, type: str):
@@ -63,7 +61,6 @@ def embed_chunked(source, type: str):
         "error": f"Error occurred while embedding: {str(err)}",
         "result": []
       }
-
 
 #* PROCESS THE GIVEN TEXT/MESSAGE
 def process_text(text: str, type: str):

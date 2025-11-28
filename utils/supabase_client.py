@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 from enum import Enum
 
-
 load_dotenv()
 SUPABASE_URL: str = os.getenv("SUPABASE_URL")
 SUPABASE_KEY: str = os.getenv("SUPABASE_ANON_KEY")
@@ -12,7 +11,6 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 class Role(Enum):
   USER = "user"
   BOT = "bot"
-
 
 def insert_chat(chat_id: int, role: Role, message: str):
   try:
@@ -37,7 +35,6 @@ def insert_chat(chat_id: int, role: Role, message: str):
       "success": False,
       "error": str(err)
     }
-
 
 def insert_knowledge(chunked, embedded):
   insert_data = []
