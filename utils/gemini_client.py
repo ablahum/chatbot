@@ -7,22 +7,6 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key = GEMINI_API_KEY)
 
-# def embed_with_gemini(text: str):
-#   try:
-#     response = client.embeddings.create(
-#       model="models/embedding-001",
-#       content=text
-#     )
-#     # Response Gemini biasanya fieldnya 'embedding' -> 'values'
-#     vector = response.embedding.values if hasattr(response.embedding, "values") else response.embedding
-#     return vector
-#   except Exception as err:
-#     return {
-#       "success": False,
-#       "error": f"Error occurred while embedding with Gemini: {str(err)}",
-#       "result": []
-#     }
-
 #* GET GEMINI'S RESPONSE/ANSWER
 def ask_gemini(context: str, text: str):
   try:
