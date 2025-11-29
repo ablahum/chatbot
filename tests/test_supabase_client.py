@@ -1,132 +1,118 @@
-import unittest
+import pytest
 from unittest.mock import patch, MagicMock
 from utils.supabase_client import insert_chat, insert_knowledge, search_knowledge, Role
 
-class TestInsertChat(unittest.TestCase):
-  @patch("utils.supabase_client.supabase")
-  def test_insert_chat_success(self, mock_supabase):
-    chat_id = 123456
-    role = Role.USER
-    message = "Hello, world!"
-    mock_response = MagicMock()
-    mock_response.error = None
-    mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+@pytest.mark.parametrize(
+  "chat_id, role, message, mock_error, exception, expected_success,expected_message",
+  [
+    (123456, Role.USER, "Hello, world!", None, None, True, "Chat successfully inserted."),
+    (456789, Role.BOT, "Bot says hi!", "DB Connection Error", None, False, "DB Connection Error"),
+    (999999, Role.BOT, "Oops!", None, Exception("Unexpected Failure"), False, "Unexpected Failure"),
+  ]
+)
+@patch("utils.supabase_client.supabase")
+def test_insert_chat(mock_supabase, chat_id, role, message, mock_error, exception, expected_success, expected_message):
+  tbl = mock_supabase.table.return_value
+  ins = tbl.insert.return_value
+  exec_func = ins.execute
 
-    result = insert_chat(chat_id, role, message)
-    self.assertTrue(result["success"])
-    self.assertEqual(result["message"], "Chat successfully inserted.")
+  if exception:
+    exec_func.side_effect = exception
+  else:
+    resp = MagicMock()
+    resp.error = mock_error
+    exec_func.return_value = resp
 
-    mock_supabase.table.assert_called_with('chat_history')
-    mock_supabase.table.return_value.insert.assert_called_once_with({
-      "chat_id": chat_id,
-      "role": role.value,
-      "message": message
+  result = insert_chat(chat_id, role, message)
+
+  if expected_success:
+    assert result["success"] is True
+    assert result["message"] == expected_message
+    mock_supabase.table.assert_called_once_with("chat_history")
+    tbl.insert.assert_called_once_with({
+      "chat_id": chat_id, "role": role.value, "message": message
     })
-    mock_supabase.table.return_value.insert.return_value.execute.assert_called_once()
+    exec_func.assert_called_once()
+  else:
+    assert result["success"] is False
+    assert expected_message in result["error"]
 
-  @patch("utils.supabase_client.supabase")
-  def test_insert_chat_db_error(self, mock_supabase):
-    chat_id = 456789
-    role = Role.BOT
-    message = "Bot says hi!"
-    mock_response = MagicMock()
-    mock_response.error = "DB Connection Error"
-    mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+@pytest.mark.parametrize(
+  "chunked,embedded,mock_error,exception,expected_success,expected_msg",
+  [
+    (["chunk 1", "chunk 2"], [[0.1, 0.2], [0.3, 0.4]], None, None, True, "Knowledge successfully inserted."),
+    (["chunk"], [[0.11, 0.22]], "Supabase Error", None, False, "Supabase Error"),
+    (["fail"], [[0.99]], None, Exception("Insert Exception"), False, "Insert Exception"),
+  ]
+)
+@patch("utils.supabase_client.supabase")
+def test_insert_knowledge(mock_supabase, chunked, embedded, mock_error, exception, expected_success, expected_msg):
+  tbl = mock_supabase.table.return_value
+  ins = tbl.insert.return_value
+  exec_func = ins.execute
 
-    result = insert_chat(chat_id, role, message)
-    self.assertFalse(result["success"])
-    self.assertIn("DB Connection Error", result["error"])
+  if exception:
+    exec_func.side_effect = exception
+  else:
+    resp = MagicMock()
+    resp.error = mock_error
+    exec_func.return_value = resp
 
-  @patch("utils.supabase_client.supabase")
-  def test_insert_chat_exception(self, mock_supabase):
-    chat_id = 999999
-    role = Role.BOT
-    message = "Oops!"
-    mock_supabase.table.return_value.insert.return_value.execute.side_effect = Exception("Unexpected Failure")
+  result = insert_knowledge(chunked, embedded)
 
-    result = insert_chat(chat_id, role, message)
-    self.assertFalse(result["success"])
-    self.assertIn("Unexpected Failure", result["error"])
+  if expected_success:
+    assert result["success"] is True
+    assert result["message"] == expected_msg
 
-class TestInsertKnowledge(unittest.TestCase):
-  @patch("utils.supabase_client.supabase")
-  def test_insert_knowledge_success(self, mock_supabase):
-    chunked = ["chunk 1", "chunk 2"]
-    embedded = [[0.1, 0.2], [0.3, 0.4]]
-    mock_response = MagicMock()
-    mock_response.error = None
-    mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+    expected_data = [{"content": c, "embedding": e} for c, e in zip(chunked, embedded)]
+    mock_supabase.table.assert_called_once_with("knowledge_base")
+    tbl.insert.assert_called_once_with(expected_data)
+    exec_func.assert_called_once()
+  else:
+    assert result["success"] is False
+    assert expected_msg in result["error"]
 
-    result = insert_knowledge(chunked, embedded)
-    self.assertTrue(result["success"])
-    self.assertEqual(result["message"], "Knowledge successfully inserted.")
+@pytest.mark.parametrize(
+  "embedded,match_count,mock_data,exception,should_success",
+  [
+    (
+      [0.1, 0.5, 0.9], 3,
+      [
+        {"id": 1, "content": "A", "score": 0.92},
+        {"id": 2, "content": "B", "score": 0.87},
+        {"id": 3, "content": "C", "score": 0.77},
+      ],
+      None, True
+    ),
+    (
+      [1, 2, 3], 2,
+      None, Exception("RPC Error!"), False
+    ),
+  ]
+)
+@patch("utils.supabase_client.supabase")
+def test_search_knowledge(mock_supabase, embedded, match_count, mock_data, exception, should_success):
+  rpc = mock_supabase.rpc.return_value
+  exec_func = rpc.execute
 
-    expected_data = [
-      {"content": chunked[0], "embedding": embedded[0]},
-      {"content": chunked[1], "embedding": embedded[1]}
-    ]
-    mock_supabase.table.assert_called_with("knowledge_base")
-    mock_supabase.table.return_value.insert.assert_called_once_with(expected_data)
-    mock_supabase.table.return_value.insert.return_value.execute.assert_called_once()
+  if exception:
+    exec_func.side_effect = exception
+  else:
+    resp = MagicMock()
+    resp.data = mock_data
+    exec_func.return_value = resp
 
-  @patch("utils.supabase_client.supabase")
-  def test_insert_knowledge_db_error(self, mock_supabase):
-    chunked = ["chunk"]
-    embedded = [[0.11, 0.22]]
-    mock_response = MagicMock()
-    mock_response.error = "Supabase Error"
-    mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+  result = search_knowledge(embedded, match_count)
 
-    result = insert_knowledge(chunked, embedded)
-    self.assertFalse(result["success"])
-    self.assertIn("Supabase Error", result["error"])
-
-  @patch("utils.supabase_client.supabase")
-  def test_insert_knowledge_exception(self, mock_supabase):
-    chunked = ["fail"]
-    embedded = [[0.99]]
-    mock_supabase.table.return_value.insert.return_value.execute.side_effect = Exception("Insert Exception")
-
-    result = insert_knowledge(chunked, embedded)
-    self.assertFalse(result["success"])
-    self.assertIn("Insert Exception", result["error"])
-
-
-class TestSearchKnowledge(unittest.TestCase):
-  @patch("utils.supabase_client.supabase")
-  def test_search_knowledge_success(self, mock_supabase):
-    embedded = [0.1, 0.5, 0.9]
-    match_count = 3
-    mock_response = MagicMock()
-    mock_response.data = [
-      {"id": 1, "content": "A", "score": 0.92},
-      {"id": 2, "content": "B", "score": 0.87},
-      {"id": 3, "content": "C", "score": 0.77},
-    ]
-    mock_supabase.rpc.return_value.execute.return_value = mock_response
-
-    result = search_knowledge(embedded, match_count)
-
+  if should_success:
     mock_supabase.rpc.assert_called_once_with("match_documents", {
       "query_embedding": embedded,
       "match_count": match_count
     })
-    mock_supabase.rpc.return_value.execute.assert_called_once()
-    self.assertEqual(result, mock_response.data)
-
-  @patch("utils.supabase_client.supabase")
-  def test_search_knowledge_exception(self, mock_supabase):
-    embedded = [1, 2, 3]
-    match_count = 2
-    mock_supabase.rpc.return_value.execute.side_effect = Exception("RPC Error!")
-
-    from utils.supabase_client import search_knowledge
-    result = search_knowledge(embedded, match_count)
-
-    self.assertIsInstance(result, dict)
-    self.assertFalse(result["success"])
-    self.assertIn("Error occurred while searching", result["error"])
-    self.assertIn("RPC Error!", result["error"])
-
-if __name__ == '__main__':
-  unittest.main()
+    exec_func.assert_called_once()
+    assert result == mock_data
+  else:
+    assert isinstance(result, dict)
+    assert result["success"] is False
+    assert "Error occurred while searching" in result["error"]
+    assert "RPC Error!" in result["error"]
