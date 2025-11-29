@@ -96,7 +96,6 @@ async def telegram_webhook(request: Request):
         # insert_chat(chat_id, Role.BOT, answer)
         # sent_message(chat_id, answer)
     else:
-        #* user role
       if lower_text.startswith("/insert"):
         sent_message(chat_id, (
           "Anda harus masuk ke mode Admin terlebih dahulu untuk menambahkan informasi baru. Ketik /admin untuk masuk ke mode Admin."
@@ -105,7 +104,6 @@ async def telegram_webhook(request: Request):
       elif lower_text.startswith("/user"):
         sent_message(chat_id, "Anda sudah berada di mode User.")
       else:
-        # retrieve knowledge
         matches = process_text(text, 'retrieve')
 
         if isinstance(matches, list):
@@ -115,7 +113,6 @@ async def telegram_webhook(request: Request):
         else:
           context = ""
         
-        # ask ai
         answer = ask_gemini(context, text)
         insert_chat(chat_id, Role.USER, text)
         insert_chat(chat_id, Role.BOT, answer)
