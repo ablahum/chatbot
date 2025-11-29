@@ -9,7 +9,6 @@ from utils.processes import process_text
 from utils.supabase_client import insert_chat
 from utils.telegram_client import sent_message
 
-
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
@@ -19,7 +18,6 @@ class Role(Enum):
   USER = "user"
   BOT = "bot"
 
-
 @app.on_event("startup")
 def set_webhook():
   url = f"https://api.telegram.org/bot{TOKEN}/setWebhook"
@@ -28,7 +26,6 @@ def set_webhook():
   }
   request = requests.post(url, json = payload)
   print("Webhook set response:", request.json())
-
 
 @app.post("/webhook")
 async def telegram_webhook(request: Request):

@@ -12,7 +12,6 @@ venv.bak/
 
 # dotenv environment variables
 .env
-.env.*
 
 # VS Code settings
 .vscode/
